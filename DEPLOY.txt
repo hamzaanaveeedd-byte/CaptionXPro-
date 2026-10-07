@@ -1,0 +1,23 @@
+CAPTIONX PRO WEBSITE + EDITOR
+
+Upload the CONTENTS of this ZIP directly to the root of your GitHub repository.
+Do not create another nested project folder.
+
+GitHub root should show:
+app/
+components/
+lib/
+public/
+store/
+types/
+package.json
+next.config.ts
+tsconfig.json
+
+Vercel environment variable:
+DEEPGRAM_API_KEY = your Deepgram API key
+
+Branding is intentionally file-mismatch-proof:
+- Logo is rendered by components/captionxpro-logo.tsx as inline SVG (transparent background)
+- Favicon is app/icon.svg
+- No PNG logo import is required

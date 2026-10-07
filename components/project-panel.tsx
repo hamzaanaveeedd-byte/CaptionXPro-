@@ -11,7 +11,7 @@ const ratios: Array<[AspectRatio, string]> = [
 const zones: Array<[SafeZone, string]> = [
   ["none", "None"], ["all", "All"], ["tiktok", "TikTok"], ["youtube", "YouTube"], ["instagram", "Instagram"], ["linkedin", "LinkedIn"], ["x", "X"],
 ];
-const swatches = ["#111214", "#ffffff", "#ef4444", "#facc15", "#22c55e", "#38bdf8", "#8b5cf6"];
+const swatches = ["#111214", "#ffffff", "#22e6a8", "#facc15", "#14b8a6", "#38bdf8", "#8b5cf6"];
 
 export function ProjectPanel() {
   const canvas = useEditorStore((state) => state.canvas);

@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { CAPTIONXPRO_FAVICON_FILE } from "@/lib/brand";
+import "./marketing.css";
 
 export const metadata: Metadata = {
-  title: "CaptionX Pro | AI Caption & Video Editor",
-  description: "AI speech-to-text, subtitle editing, dubbing, timeline editing and video canvas tools powered by Deepgram.",
-  icons: {
-    icon: CAPTIONXPRO_FAVICON_FILE,
-    shortcut: CAPTIONXPRO_FAVICON_FILE,
-    apple: CAPTIONXPRO_FAVICON_FILE,
+  title: {
+    default: "CaptionX Pro | AI Caption Editor",
+    template: "%s | CaptionX Pro",
   },
+  description: "AI speech-to-text, synchronized caption editing, subtitle styling and professional subtitle exports powered by Deepgram.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
