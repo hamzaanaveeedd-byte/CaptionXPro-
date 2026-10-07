@@ -1,0 +1,18 @@
+CAPTIONX PRO V2.5.2 - DEPLOYMENT PACKAGE
+
+Upload the CONTENTS of this folder to the ROOT of the GitHub repository.
+Do not place these files inside another nested folder.
+
+Branding canonical names used by the new code:
+- components/captionxpro-logo.tsx -> CaptionXProLogo
+- public/captionxpro-logo.png
+- public/captionxpro-favicon.png
+
+Backward compatibility is intentionally included:
+- components/brand-logo.tsx exports BrandLogo, CaptionxLogo, and CaptionXProLogo
+- public/captionx-wordmark.png aliases the canonical logo
+- public/captionx-favicon.png aliases the canonical favicon
+
+This means the old import:
+  import { CaptionxLogo } from "@/components/brand-logo";
+will also compile if a stale file remains during migration.

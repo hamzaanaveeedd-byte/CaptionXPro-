@@ -1,6 +1,6 @@
 {
-  "name": "captionxpro-v2-5-rebuilt",
-  "version": "2.5.0",
+  "name": "captionxpro-v2-5-2-verified",
+  "version": "2.5.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
