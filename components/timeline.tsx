@@ -1,3 +1,118 @@
 "use client";
-import { useMemo,useRef,useState } from "react";import { formatClock } from "@/lib/time";import { useEditorStore } from "@/store/editor-store";import type { Caption } from "@/types/editor";const LEFT=42;type Drag={id:string;mode:"move"|"start"|"end";x:number;s:number;e:number;ps:number;pe:number};
-export function Timeline({peaks,onSeek}:{peaks:number[];onSeek:(t:number)=>void}){const media=useEditorStore(s=>s.media),caps=useEditorStore(s=>s.captions),now=useEditorStore(s=>s.currentTime),sel=useEditorStore(s=>s.selectedCaptionId),select=useEditorStore(s=>s.selectCaption),zoom=useEditorStore(s=>s.zoom),setZoom=useEditorStore(s=>s.setZoom),update=useEditorStore(s=>s.updateCaptionTiming),create=useEditorStore(s=>s.createCaptionAt);const ref=useRef<HTMLDivElement>(null);const[drag,setDrag]=useState<Drag|null>(null);const dur=Math.max(media?.duration??0,...caps.map(c=>c.end),10),width=Math.max(1100,dur*zoom+LEFT+40),ticks=useMemo(()=>{const st=zoom>=80?1:zoom>=45?2:5,r=[];for(let t=0;t<=dur;t+=st)r.push(t);return r},[dur,zoom]);function time(x:number){const n=ref.current;if(!n)return 0;const r=n.getBoundingClientRect();return Math.max(0,Math.min(dur,(x-r.left+n.scrollLeft-LEFT)/zoom))}function start(e:React.PointerEvent,c:Caption,m:Drag["mode"]){e.stopPropagation();(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);select(c.id);setDrag({id:c.id,mode:m,x:e.clientX,s:c.start,e:c.end,ps:c.start,pe:c.end})}function move(e:React.PointerEvent){if(!drag)return;const d=(e.clientX-drag.x)/zoom,len=drag.e-drag.s;let s=drag.s,en=drag.e;if(drag.mode==="move"){s=Math.max(0,Math.min(dur-len,drag.s+d));en=s+len}else if(drag.mode==="start")s=Math.max(0,Math.min(drag.e-.08,drag.s+d));else en=Math.min(dur,Math.max(drag.s+.08,drag.e+d));setDrag({...drag,ps:s,pe:en})}function end(){if(drag){update(drag.id,drag.ps,drag.pe);setDrag(null)}}return <section className="pro-timeline"><div className="timeline-head"><div><b>Timeline</b><span>{formatClock(now,false)}</span></div><div><button onClick={()=>setZoom(zoom-10)}>−</button><input type="range" min="20" max="140" value={zoom} onChange={e=>setZoom(+e.target.value)}/><button onClick={()=>setZoom(zoom+10)}>＋</button><button onClick={()=>setZoom(Math.max(20,Math.min(140,1000/dur)))}>Fit to Screen</button></div></div><div className="timeline-scroll" ref={ref} onClick={e=>{if((e.target as HTMLElement).closest(".caption-block"))return;const t=time(e.clientX);onSeek(t);if(e.detail===2)create(t)}}><div className="timeline-canvas" style={{width}} onPointerMove={move} onPointerUp={end} onPointerCancel={end}><div className="ruler-row">{ticks.map(t=><div className="tick" key={t} style={{left:LEFT+t*zoom}}><span>{t<60?`${t}s`:`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,"0")}`}</span></div>)}</div><div className="track-label waveform-label">1</div><div className="video-track" style={{left:LEFT,width:dur*zoom}}>{media&&<div className="video-clip"><span>{media.kind==="video"?"▧ VIDEO":"♫ AUDIO"}</span><b>{media.name}</b></div>}</div><div className="waveform-track pro-wave" style={{left:LEFT,width:dur*zoom}}>{(peaks.length?peaks:new Array(180).fill(.25)).map((p,i,a)=><i key={i} style={{height:`${Math.max(5,p*32)}px`,left:`${i/a.length*100}%`}}/>)}</div><div className="track-label caption-label">CC</div><div className="caption-track" style={{left:LEFT,width:dur*zoom}}>{caps.map(c=>{const d=drag?.id===c.id?drag:null,s=d?.ps??c.start,e=d?.pe??c.end;return <div key={c.id} className={`caption-block ${sel===c.id?"selected":""}`} style={{left:s*zoom,width:Math.max(10,(e-s)*zoom)}} onPointerDown={x=>start(x,c,"move")}><span className="resize-handle left" onPointerDown={x=>start(x,c,"start")}/><b>{c.text}</b><span className="resize-handle right" onPointerDown={x=>start(x,c,"end")}/></div>})}</div><div className="playhead" style={{left:LEFT+now*zoom}}><span/></div></div></div></section>}
+
+import { useMemo, useRef, useState } from "react";
+import { formatClock } from "@/lib/time";
+import { useEditorStore } from "@/store/editor-store";
+import type { Caption } from "@/types/editor";
+
+const LEFT = 52;
+type DragState = { id: string; mode: "move" | "start" | "end"; clientX: number; start: number; end: number; previewStart: number; previewEnd: number };
+
+export function Timeline({ peaks, thumbnails, onSeek }: { peaks: number[]; thumbnails: string[]; onSeek: (time: number) => void }) {
+  const media = useEditorStore((state) => state.media);
+  const captions = useEditorStore((state) => state.captions);
+  const currentTime = useEditorStore((state) => state.currentTime);
+  const selected = useEditorStore((state) => state.selectedCaptionId);
+  const select = useEditorStore((state) => state.selectCaption);
+  const zoom = useEditorStore((state) => state.zoom);
+  const setZoom = useEditorStore((state) => state.setZoom);
+  const updateTiming = useEditorStore((state) => state.updateCaptionTiming);
+  const createCaption = useEditorStore((state) => state.createCaptionAt);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+
+  const duration = Math.max(media?.duration ?? 0, ...captions.map((caption) => caption.end), 10);
+  const width = Math.max(1100, duration * zoom + LEFT + 80);
+  const ticks = useMemo(() => {
+    const step = zoom >= 95 ? 1 : zoom >= 52 ? 2 : 5;
+    const result: number[] = [];
+    for (let time = 0; time <= duration; time += step) result.push(time);
+    return result;
+  }, [duration, zoom]);
+
+  function pointerToTime(clientX: number) {
+    const node = scrollRef.current;
+    if (!node) return 0;
+    const rect = node.getBoundingClientRect();
+    return Math.max(0, Math.min(duration, (clientX - rect.left + node.scrollLeft - LEFT) / zoom));
+  }
+
+  function startDrag(event: React.PointerEvent, caption: Caption, mode: DragState["mode"]) {
+    event.stopPropagation();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    select(caption.id);
+    setDragState({ id: caption.id, mode, clientX: event.clientX, start: caption.start, end: caption.end, previewStart: caption.start, previewEnd: caption.end });
+  }
+
+  function moveDrag(event: React.PointerEvent) {
+    if (!dragState) return;
+    const delta = (event.clientX - dragState.clientX) / zoom;
+    const length = dragState.end - dragState.start;
+    let start = dragState.start;
+    let end = dragState.end;
+    if (dragState.mode === "move") {
+      start = Math.max(0, Math.min(duration - length, dragState.start + delta));
+      end = start + length;
+    } else if (dragState.mode === "start") {
+      start = Math.max(0, Math.min(dragState.end - 0.08, dragState.start + delta));
+    } else {
+      end = Math.min(duration, Math.max(dragState.start + 0.08, dragState.end + delta));
+    }
+    setDragState({ ...dragState, previewStart: start, previewEnd: end });
+  }
+
+  function endDrag() {
+    if (!dragState) return;
+    updateTiming(dragState.id, dragState.previewStart, dragState.previewEnd);
+    setDragState(null);
+  }
+
+  const fitZoom = () => {
+    const node = scrollRef.current;
+    const usable = Math.max(500, (node?.clientWidth ?? 1100) - LEFT - 40);
+    setZoom(usable / duration);
+  };
+
+  return (
+    <section className="pro-timeline">
+      <div className="timeline-head">
+        <div><b>Timeline</b><span>{formatClock(currentTime)}</span></div>
+        <div className="timeline-zoom"><button onClick={() => setZoom(zoom - 10)}>−</button><input type="range" min="22" max="160" value={zoom} onChange={(event) => setZoom(Number(event.target.value))} /><button onClick={() => setZoom(zoom + 10)}>＋</button><button className="fit-button" onClick={fitZoom}>Fit to Screen</button></div>
+      </div>
+      <div
+        className="timeline-scroll"
+        ref={scrollRef}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest(".caption-block")) return;
+          const time = pointerToTime(event.clientX);
+          onSeek(time);
+          if (event.detail === 2) createCaption(time);
+        }}
+      >
+        <div className="timeline-canvas" style={{ width }} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
+          <div className="ruler-row">{ticks.map((time) => <div className="tick" key={time} style={{ left: LEFT + time * zoom }}><span>{time < 60 ? `${time}s` : `${Math.floor(time / 60)}:${String(Math.floor(time % 60)).padStart(2, "0")}`}</span></div>)}</div>
+          <div className="track-label video-label">1</div>
+          <div className="video-track" style={{ left: LEFT, width: duration * zoom }}>
+            {media && <div className="video-clip">
+              {thumbnails.length ? <div className="thumbnail-strip">{thumbnails.map((thumbnail, index) => <img key={`${thumbnail.slice(-18)}-${index}`} src={thumbnail} alt="" />)}</div> : <div className="clip-placeholder">{media.kind === "video" ? "VIDEO" : "AUDIO"}</div>}
+              <span className="clip-name">{media.name}</span>
+            </div>}
+          </div>
+          <div className="waveform-track" style={{ left: LEFT, width: duration * zoom }}>
+            {(peaks.length ? peaks : new Array(220).fill(0.24)).map((peak, index, array) => <i key={index} style={{ height: `${Math.max(4, peak * 42)}px`, left: `${(index / array.length) * 100}%` }} />)}
+          </div>
+          <div className="track-label caption-label">CC</div>
+          <div className="caption-track" style={{ left: LEFT, width: duration * zoom }}>
+            {captions.map((caption) => {
+              const currentDrag = dragState?.id === caption.id ? dragState : null;
+              const start = currentDrag?.previewStart ?? caption.start;
+              const end = currentDrag?.previewEnd ?? caption.end;
+              return <div key={caption.id} className={`caption-block ${selected === caption.id ? "selected" : ""}`} style={{ left: start * zoom, width: Math.max(12, (end - start) * zoom) }} onPointerDown={(event) => startDrag(event, caption, "move")}><span className="resize-handle left" onPointerDown={(event) => startDrag(event, caption, "start")} /><b>{caption.text}</b><span className="resize-handle right" onPointerDown={(event) => startDrag(event, caption, "end")} /></div>;
+            })}
+          </div>
+          <div className="playhead" style={{ left: LEFT + currentTime * zoom }}><span /></div>
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -3,20 +3,52 @@
 import { useEditorStore } from "@/store/editor-store";
 
 export function StylePanel() {
-  const style = useEditorStore((s) => s.style);
-  const setStyle = useEditorStore((s) => s.setStyle);
+  const style = useEditorStore((state) => state.style);
+  const setStyle = useEditorStore((state) => state.setStyle);
+
   return (
-    <aside className="style-panel">
-      <div className="panel-title"><h3>Caption style</h3><span>Preview styling</span></div>
-      <label>Size <span>{style.fontSize}px</span><input type="range" min="18" max="72" value={style.fontSize} onChange={(e) => setStyle({ fontSize: Number(e.target.value) })} /></label>
-      <label>Weight<select value={style.fontWeight} onChange={(e) => setStyle({ fontWeight: Number(e.target.value) as 400 | 600 | 700 | 800 })}><option value="400">Regular</option><option value="600">Semi bold</option><option value="700">Bold</option><option value="800">Extra bold</option></select></label>
-      <div className="color-row"><label>Text<input type="color" value={style.textColor} onChange={(e) => setStyle({ textColor: e.target.value })} /></label><label>Background<input type="color" value={style.backgroundColor} onChange={(e) => setStyle({ backgroundColor: e.target.value })} /></label></div>
-      <label>Background <span>{Math.round(style.backgroundOpacity * 100)}%</span><input type="range" min="0" max="100" value={style.backgroundOpacity * 100} onChange={(e) => setStyle({ backgroundOpacity: Number(e.target.value) / 100 })} /></label>
-      <label>Vertical position <span>{style.positionY}%</span><input type="range" min="18" max="88" value={style.positionY} onChange={(e) => setStyle({ positionY: Number(e.target.value) })} /></label>
-      <label>Caption width <span>{style.maxWidth}%</span><input type="range" min="45" max="96" value={style.maxWidth} onChange={(e) => setStyle({ maxWidth: Number(e.target.value) })} /></label>
-      <label>Alignment<select value={style.textAlign} onChange={(e) => setStyle({ textAlign: e.target.value as "left" | "center" | "right" })}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
-      <div className="toggle-row"><button className={style.italic ? "on" : ""} onClick={() => setStyle({ italic: !style.italic })}>Italic</button><button className={style.uppercase ? "on" : ""} onClick={() => setStyle({ uppercase: !style.uppercase })}>UPPERCASE</button><button className={style.shadow ? "on" : ""} onClick={() => setStyle({ shadow: !style.shadow })}>Shadow</button></div>
-      <p className="style-note">SRT/VTT preserve text and timing only. Visual styling stays in this project preview/JSON.</p>
-    </aside>
+    <div className="style-panel">
+      <Section title="Text">
+        <label>Font family
+          <select value={style.fontFamily} onChange={(event) => setStyle({ fontFamily: event.target.value })}>
+            <option value="Inter, ui-sans-serif, system-ui, sans-serif">Inter / System</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="ui-monospace, SFMono-Regular, Menlo, monospace">Mono</option>
+          </select>
+        </label>
+        <Range label="Font size" value={style.fontSize} min={18} max={84} suffix="px" onChange={(value) => setStyle({ fontSize: value })} />
+        <label>Weight
+          <select value={style.fontWeight} onChange={(event) => setStyle({ fontWeight: Number(event.target.value) as 400 | 600 | 700 | 800 })}>
+            <option value={400}>Regular</option><option value={600}>Semi Bold</option><option value={700}>Bold</option><option value={800}>Extra Bold</option>
+          </select>
+        </label>
+      </Section>
+      <Section title="Color & background">
+        <div className="dual-color">
+          <label>Text<input type="color" value={style.textColor} onChange={(event) => setStyle({ textColor: event.target.value })} /></label>
+          <label>Background<input type="color" value={style.backgroundColor} onChange={(event) => setStyle({ backgroundColor: event.target.value })} /></label>
+        </div>
+        <Range label="Background opacity" value={Math.round(style.backgroundOpacity * 100)} min={0} max={100} suffix="%" onChange={(value) => setStyle({ backgroundOpacity: value / 100 })} />
+      </Section>
+      <Section title="Layout">
+        <Range label="Vertical position" value={style.positionY} min={10} max={94} suffix="%" onChange={(value) => setStyle({ positionY: value })} />
+        <Range label="Max width" value={style.maxWidth} min={30} max={98} suffix="%" onChange={(value) => setStyle({ maxWidth: value })} />
+        <div className="segmented"><button className={style.textAlign === "left" ? "on" : ""} onClick={() => setStyle({ textAlign: "left" })}>Left</button><button className={style.textAlign === "center" ? "on" : ""} onClick={() => setStyle({ textAlign: "center" })}>Center</button><button className={style.textAlign === "right" ? "on" : ""} onClick={() => setStyle({ textAlign: "right" })}>Right</button></div>
+      </Section>
+      <Section title="Effects">
+        <div className="toggle-grid"><Toggle label="Italic" on={style.italic} click={() => setStyle({ italic: !style.italic })} /><Toggle label="Uppercase" on={style.uppercase} click={() => setStyle({ uppercase: !style.uppercase })} /><Toggle label="Shadow" on={style.shadow} click={() => setStyle({ shadow: !style.shadow })} /><Toggle label="Stroke" on={style.stroke} click={() => setStyle({ stroke: !style.stroke })} /></div>
+      </Section>
+    </div>
   );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="inspector-section"><h3>{title}</h3>{children}</section>;
+}
+function Range({ label, value, min, max, suffix, onChange }: { label: string; value: number; min: number; max: number; suffix: string; onChange: (value: number) => void }) {
+  return <label className="range-label"><span>{label}<b>{value}{suffix}</b></span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+}
+function Toggle({ label, on, click }: { label: string; on: boolean; click: () => void }) {
+  return <button className={`mini-toggle ${on ? "on" : ""}`} onClick={click}>{label}</button>;
 }

@@ -1,0 +1,27 @@
+CAPTIONX PRO V2.5 CLEAN REBUILD
+
+IMPORTANT:
+This ZIP is packaged with the project files at the ZIP root.
+After extracting, GitHub repository root should directly show:
+
+app/
+components/
+lib/
+public/
+store/
+types/
+package.json
+next.config.ts
+tsconfig.json
+README.md
+
+Brand naming is intentionally consistent:
+public/captionxpro-logo.png
+public/captionxpro-favicon.png
+components/captionxpro-logo.tsx
+React export: CaptionXProLogo
+
+Vercel Environment Variable:
+DEEPGRAM_API_KEY = your Deepgram API key
+
+Do not create a second nested project folder inside the GitHub repository.

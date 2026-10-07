@@ -2,14 +2,16 @@ import type { DeepgramResponse } from "@/types/editor";
 
 export type TranscriptionLanguage = "auto" | "en" | "ur" | "ar" | "multi";
 
-export async function transcribeWithDeepgram(file: File, language: TranscriptionLanguage, onStage?: (stage: string) => void): Promise<DeepgramResponse> {
+export async function transcribeWithDeepgram(
+  file: File,
+  language: TranscriptionLanguage,
+  onStage?: (stage: string) => void,
+): Promise<DeepgramResponse> {
   onStage?.("Securing Deepgram connection…");
   const tokenResponse = await fetch("/api/deepgram/token", { method: "POST" });
-  if (!tokenResponse.ok) {
-    const body = await tokenResponse.json().catch(() => ({}));
-    throw new Error(body.error || "Could not create a Deepgram access token.");
-  }
-  const { access_token: accessToken } = await tokenResponse.json();
+  const tokenBody = await tokenResponse.json().catch(() => ({}));
+  if (!tokenResponse.ok) throw new Error(tokenBody.error || "Could not create a Deepgram access token.");
+  const accessToken = tokenBody.access_token as string | undefined;
   if (!accessToken) throw new Error("Deepgram access token was empty.");
 
   const params = new URLSearchParams({
@@ -21,7 +23,7 @@ export async function transcribeWithDeepgram(file: File, language: Transcription
   if (language === "auto") params.set("detect_language", "true");
   else params.set("language", language);
 
-  onStage?.(file.type.startsWith("video/") ? "Extracting speech from video…" : "Analyzing audio…");
+  onStage?.(file.type.startsWith("video/") ? "Reading speech from video…" : "Analyzing audio…");
   const response = await fetch(`https://api.deepgram.com/v1/listen?${params.toString()}`, {
     method: "POST",
     headers: {
@@ -30,11 +32,9 @@ export async function transcribeWithDeepgram(file: File, language: Transcription
     },
     body: file,
   });
-
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const message = payload?.err_msg || payload?.error || `Deepgram request failed (${response.status}).`;
-    throw new Error(message);
+    throw new Error(payload?.err_msg || payload?.error || `Deepgram request failed (${response.status}).`);
   }
   return payload as DeepgramResponse;
 }
