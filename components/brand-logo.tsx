@@ -20,3 +20,7 @@ export function BrandLogo({ compact = false, className = "" }: BrandLogoProps) {
     </Link>
   );
 }
+
+// Backward-compatible export for older V2.5 toolbar builds.
+// This lets both `BrandLogo` and the earlier `CaptionxLogo` import compile safely.
+export const CaptionxLogo = BrandLogo;
