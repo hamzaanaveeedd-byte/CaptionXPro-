@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { SmartSplitProfile } from "@/lib/captions";
 import { formatClock, parseTime } from "@/lib/time";
 import { useEditorStore } from "@/store/editor-store";
 
@@ -15,7 +16,11 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
   const duplicate = useEditorStore((state) => state.duplicateCaption);
   const merge = useEditorStore((state) => state.mergeWithNext);
   const split = useEditorStore((state) => state.splitCaptionAt);
+  const smartSplit = useEditorStore((state) => state.smartSplitCaptions);
   const [query, setQuery] = useState("");
+  const [splitMode, setSplitMode] = useState<"manual" | "ai">("manual");
+  const [smartProfile, setSmartProfile] = useState<SmartSplitProfile>("balanced");
+  const [splitNotice, setSplitNotice] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -29,8 +34,20 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
     element?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [active, query]);
 
+  useEffect(() => {
+    if (!splitNotice) return;
+    const timer = window.setTimeout(() => setSplitNotice(""), 3200);
+    return () => window.clearTimeout(timer);
+  }, [splitNotice]);
+
   if (!captions.length) {
     return <div className="caption-empty"><b>No captions yet</b><span>Generate auto subtitles, upload SRT/VTT, or start from scratch.</span></div>;
+  }
+
+  function runSmartSplit() {
+    setSplitMode("ai");
+    const count = smartSplit(smartProfile);
+    setSplitNotice(count ? `AI Smart Split created ${count} synced caption segments. Use Undo to revert.` : "No captions were changed.");
   }
 
   return (
@@ -39,6 +56,39 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
         <div><b>Captions</b><span>{captions.length} segments</span></div>
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search captions…" />
       </div>
+
+      <div className="caption-split-toolbar">
+        <div className="split-mode-buttons" aria-label="Caption split mode">
+          <button
+            className={splitMode === "manual" ? "active" : ""}
+            onClick={() => {
+              setSplitMode("manual");
+              setSplitNotice("Manual Split: place the cursor in caption text and press Enter, or use the Split button.");
+            }}
+          >
+            Manual Split
+          </button>
+          <button className={splitMode === "ai" ? "active ai" : "ai"} onClick={runSmartSplit}>
+            ✦ AI Smart Split
+          </button>
+        </div>
+        <select
+          className="smart-split-profile"
+          value={smartProfile}
+          onChange={(event) => setSmartProfile(event.target.value as SmartSplitProfile)}
+          aria-label="AI Smart Split length"
+          title="Choose the preferred caption length before running AI Smart Split"
+        >
+          <option value="short">Short · 2–3 words</option>
+          <option value="balanced">Balanced · 2–5 words</option>
+          <option value="relaxed">Readable · 3–5 words</option>
+        </select>
+        <span className="caption-split-hint">
+          {splitMode === "manual" ? "Cursor + Enter keeps manual control." : "Uses word timestamps, punctuation and speech pauses."}
+        </span>
+        {splitNotice && <div className="caption-split-notice">{splitNotice}</div>}
+      </div>
+
       <div className="caption-list" ref={listRef}>
         {filtered.map((caption, index) => (
           <article
@@ -60,13 +110,14 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
               onKeyDown={(event) => {
                 if (event.key !== "Enter" || event.shiftKey) return;
                 event.preventDefault();
+                setSplitMode("manual");
                 const target = event.currentTarget;
                 const nextId = split(caption.id, target.selectionStart ?? 0);
                 if (nextId) requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>(`[data-caption-id="${nextId}"] textarea`)?.focus());
               }}
             />
             <div className="caption-card-actions" onClick={(event) => event.stopPropagation()}>
-              <button onClick={() => split(caption.id, Math.floor(caption.text.length / 2))}>Split</button>
+              <button onClick={() => { setSplitMode("manual"); split(caption.id, Math.floor(caption.text.length / 2)); }}>Split</button>
               <button onClick={() => merge(caption.id)}>Merge next</button>
               <button onClick={() => duplicate(caption.id)}>Duplicate</button>
               <button className="danger" onClick={() => remove(caption.id)}>Delete</button>

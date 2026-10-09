@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Caption, CaptionStyle, CanvasSettings, MediaInfo, ProjectSnapshot, TranscriptionLanguage } from "@/types/editor";
-import { normalizeCaptions, splitCaption } from "@/lib/captions";
+import { normalizeCaptions, smartSplitCaptions as buildSmartSplitCaptions, splitCaption, type SmartSplitProfile } from "@/lib/captions";
 import { clamp } from "@/lib/time";
 
 type HistoryEntry = Caption[];
@@ -35,6 +35,7 @@ type EditorState = {
   deleteCaption: (id: string) => void;
   duplicateCaption: (id: string) => void;
   splitCaptionAt: (id: string, cursor: number) => string | null;
+  smartSplitCaptions: (profile?: SmartSplitProfile) => number;
   mergeWithNext: (id: string) => void;
   createCaptionAt: (time: number) => void;
   selectCaption: (id: string | null) => void;
@@ -192,6 +193,18 @@ export const useEditorStore = create<EditorState>()(
           selectedCaptionId: right.id,
         }));
         return right.id;
+      },
+      smartSplitCaptions: (profile = "balanced") => {
+        const state = get();
+        if (!state.captions.length) return 0;
+        const smartCaptions = buildSmartSplitCaptions(state.captions, profile);
+        if (!smartCaptions.length) return 0;
+        set((current) => ({
+          ...mutateWithHistory(current, () => smartCaptions),
+          selectedCaptionId: smartCaptions[0]?.id ?? null,
+          activeCaptionId: null,
+        }));
+        return smartCaptions.length;
       },
       mergeWithNext: (id) =>
         set((state) =>
