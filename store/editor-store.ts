@@ -3,7 +3,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Caption, CaptionStyle, CanvasSettings, MediaInfo, ProjectSnapshot, TranscriptionLanguage } from "@/types/editor";
-import { normalizeCaptions, smartSplitCaptions as buildSmartSplitCaptions, splitCaption, type SmartSplitProfile } from "@/lib/captions";
+import {
+  captionsFromSemanticEndIndexes,
+  getSmartSplitSourceWords,
+  normalizeCaptions,
+  smartSplitCaptions as buildSmartSplitCaptions,
+  splitCaption,
+  type SmartSplitProfile,
+} from "@/lib/captions";
 import { clamp } from "@/lib/time";
 
 type HistoryEntry = Caption[];
@@ -36,6 +43,7 @@ type EditorState = {
   duplicateCaption: (id: string) => void;
   splitCaptionAt: (id: string, cursor: number) => string | null;
   smartSplitCaptions: (profile?: SmartSplitProfile) => number;
+  semanticSmartSplitCaptions: (profile?: SmartSplitProfile) => Promise<{ count: number; model: string }>;
   mergeWithNext: (id: string) => void;
   createCaptionAt: (time: number) => void;
   selectCaption: (id: string | null) => void;
@@ -205,6 +213,47 @@ export const useEditorStore = create<EditorState>()(
           activeCaptionId: null,
         }));
         return smartCaptions.length;
+      },
+      semanticSmartSplitCaptions: async (profile = "balanced") => {
+        const state = get();
+        if (!state.captions.length) throw new Error("No captions are available to analyze.");
+
+        const sourceWords = getSmartSplitSourceWords(state.captions);
+        if (sourceWords.length < 2) throw new Error("At least two transcript words are required for AI Smart Split.");
+
+        const response = await fetch("/api/gemini/smart-split", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile,
+            language: state.detectedLanguage ?? state.language,
+            words: sourceWords.map((word) => ({
+              text: word.punctuated || word.text,
+              start: word.start,
+              end: word.end,
+            })),
+          }),
+        });
+
+        const payload = (await response.json().catch(() => ({}))) as {
+          endIndexes?: number[];
+          model?: string;
+          error?: string;
+        };
+
+        if (!response.ok) throw new Error(payload.error || `AI Smart Split failed (${response.status}).`);
+        if (!Array.isArray(payload.endIndexes)) throw new Error("AI Smart Split returned invalid caption boundaries.");
+
+        const semanticCaptions = captionsFromSemanticEndIndexes(sourceWords, payload.endIndexes);
+        if (!semanticCaptions.length) throw new Error("AI Smart Split could not map the semantic boundaries to the transcript.");
+
+        set((current) => ({
+          ...mutateWithHistory(current, () => semanticCaptions),
+          selectedCaptionId: semanticCaptions[0]?.id ?? null,
+          activeCaptionId: null,
+        }));
+
+        return { count: semanticCaptions.length, model: payload.model || "Gemini" };
       },
       mergeWithNext: (id) =>
         set((state) =>

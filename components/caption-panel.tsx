@@ -16,11 +16,12 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
   const duplicate = useEditorStore((state) => state.duplicateCaption);
   const merge = useEditorStore((state) => state.mergeWithNext);
   const split = useEditorStore((state) => state.splitCaptionAt);
-  const smartSplit = useEditorStore((state) => state.smartSplitCaptions);
+  const semanticSmartSplit = useEditorStore((state) => state.semanticSmartSplitCaptions);
   const [query, setQuery] = useState("");
   const [splitMode, setSplitMode] = useState<"manual" | "ai">("manual");
   const [smartProfile, setSmartProfile] = useState<SmartSplitProfile>("balanced");
   const [splitNotice, setSplitNotice] = useState("");
+  const [smartBusy, setSmartBusy] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -44,10 +45,19 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
     return <div className="caption-empty"><b>No captions yet</b><span>Generate auto subtitles, upload SRT/VTT, or start from scratch.</span></div>;
   }
 
-  function runSmartSplit() {
+  async function runSmartSplit() {
+    if (smartBusy) return;
     setSplitMode("ai");
-    const count = smartSplit(smartProfile);
-    setSplitNotice(count ? `AI Smart Split created ${count} synced caption segments. Use Undo to revert.` : "No captions were changed.");
+    setSmartBusy(true);
+    setSplitNotice("AI is reading and understanding the full transcript before choosing caption boundaries…");
+    try {
+      const result = await semanticSmartSplit(smartProfile);
+      setSplitNotice(`Semantic AI Smart Split analyzed the full transcript and created ${result.count} synced caption segments. Use Undo to revert.`);
+    } catch (error) {
+      setSplitNotice(error instanceof Error ? error.message : "Semantic AI Smart Split failed. Please try again.");
+    } finally {
+      setSmartBusy(false);
+    }
   }
 
   return (
@@ -68,8 +78,8 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
           >
             Manual Split
           </button>
-          <button className={splitMode === "ai" ? "active ai" : "ai"} onClick={runSmartSplit}>
-            ✦ AI Smart Split
+          <button className={splitMode === "ai" ? "active ai" : "ai"} onClick={runSmartSplit} disabled={smartBusy}>
+            {smartBusy ? "✦ Analyzing…" : "✦ AI Smart Split"}
           </button>
         </div>
         <select
@@ -78,13 +88,14 @@ export function CaptionPanel({ onSeek }: { onSeek: (time: number) => void }) {
           onChange={(event) => setSmartProfile(event.target.value as SmartSplitProfile)}
           aria-label="AI Smart Split length"
           title="Choose the preferred caption length before running AI Smart Split"
+          disabled={smartBusy}
         >
           <option value="short">Short · 2–3 words</option>
           <option value="balanced">Balanced · 2–5 words</option>
           <option value="relaxed">Readable · 3–5 words</option>
         </select>
         <span className="caption-split-hint">
-          {splitMode === "manual" ? "Cursor + Enter keeps manual control." : "Uses word timestamps, punctuation and speech pauses."}
+          {splitMode === "manual" ? "Cursor + Enter keeps manual control." : "Gemini understands the full transcript first, then original word timestamps keep every split synced."}
         </span>
         {splitNotice && <div className="caption-split-notice">{splitNotice}</div>}
       </div>

@@ -14,8 +14,15 @@ package.json
 next.config.ts
 tsconfig.json
 
-Vercel environment variable:
+Vercel environment variables:
 DEEPGRAM_API_KEY = your Deepgram API key
+GEMINI_API_KEY = your Google AI Studio Gemini API key
+
+Semantic AI Smart Split:
+- app/api/gemini/smart-split/route.ts keeps the Gemini key server-side.
+- Gemini reads the full transcript and returns semantic caption boundaries only.
+- CaptionX Pro rebuilds each caption from the original timed word tokens.
+- Manual Split remains unchanged.
 
 Branding is intentionally file-mismatch-proof:
 - Logo is rendered by components/captionxpro-logo.tsx as inline SVG (transparent background)

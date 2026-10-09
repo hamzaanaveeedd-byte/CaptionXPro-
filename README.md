@@ -18,10 +18,13 @@ There is one canonical logo component only:
 
 The main website does not depend on a PNG logo, so there is no logo filename/import mismatch.
 
-## Required Vercel variable
-`DEEPGRAM_API_KEY`
+## Required Vercel variables
+- `DEEPGRAM_API_KEY` — transcription and dubbing
+- `GEMINI_API_KEY` — Semantic AI Smart Split
 
-Add the variable in Vercel Project Settings > Environment Variables for Production and Preview.
+Add both variables in Vercel Project Settings > Environment Variables for Production and Preview.
 
 ## Caption splitting
-The captions panel includes both **Manual Split** (cursor + Enter or Split button) and **AI Smart Split**. AI Smart Split re-segments captions into 2–5 word groups using available word timestamps, punctuation, and speech pauses; it is undoable through the editor history.
+The captions panel includes both **Manual Split** (cursor + Enter or Split button) and **AI Smart Split**.
+
+AI Smart Split now uses Gemini server-side to read and understand the **entire current transcript first**, then returns semantic caption boundaries only. CaptionX Pro maps those boundaries back onto the original timed words, so Gemini never rewrites the transcript and Deepgram/manual word timings remain the timing source. Profiles remain Short (2–3), Balanced (2–5), and Readable (3–5). The operation is undoable through editor history.

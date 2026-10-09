@@ -43,6 +43,7 @@ a{color:inherit;text-decoration:none}
 .split-mode-buttons button.active{color:#eaf1f3;border-color:#4a646a;background:#1a2528}
 .split-mode-buttons button.ai{color:#bdfcf5}
 .split-mode-buttons button.ai.active{border-color:#2ebbad;background:rgba(46,187,173,.12);box-shadow:inset 0 0 0 1px rgba(46,187,173,.08)}
+.split-mode-buttons button:disabled,.smart-split-profile:disabled{opacity:.6;cursor:wait}
 .smart-split-profile{height:29px;max-width:154px;border:1px solid #2b353a;border-radius:6px;background:#0d1113;color:#c5d0d5;padding:0 7px;font-size:9px;outline:none}
 .smart-split-profile:focus{border-color:#3e7778}
 .caption-split-hint{grid-column:1 / -1;color:#75838a;font-size:8px;line-height:1.35}

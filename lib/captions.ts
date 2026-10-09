@@ -142,16 +142,42 @@ function approximateWordsFromCaption(caption: Caption): WordToken[] {
  * Real Deepgram word timestamps are preserved whenever available. Imported/manual
  * subtitles fall back to proportional timing inside their existing caption bounds.
  */
-export function smartSplitCaptions(captions: Caption[], profile: SmartSplitProfile = "balanced") {
-  if (!captions.length) return [];
-
-  const sourceWords = captions
+export function getSmartSplitSourceWords(captions: Caption[]) {
+  return captions
     .flatMap((caption) =>
       captionWordsStillMatchText(caption)
         ? caption.words.map((word) => ({ ...word }))
         : approximateWordsFromCaption(caption),
     )
     .sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+export function captionsFromSemanticEndIndexes(words: WordToken[], endIndexes: number[]) {
+  if (!words.length || !endIndexes.length) return [];
+  const captions: Caption[] = [];
+  let startIndex = 0;
+
+  for (const endIndex of endIndexes) {
+    if (!Number.isInteger(endIndex) || endIndex < startIndex || endIndex >= words.length) return [];
+    const group = words.slice(startIndex, endIndex + 1);
+    if (!group.length) return [];
+    captions.push({
+      id: id("caption"),
+      start: group[0].start,
+      end: group[group.length - 1].end,
+      text: wordsToText(group),
+      words: group.map((word) => ({ ...word })),
+    });
+    startIndex = endIndex + 1;
+  }
+
+  return startIndex === words.length ? captions : [];
+}
+
+export function smartSplitCaptions(captions: Caption[], profile: SmartSplitProfile = "balanced") {
+  if (!captions.length) return [];
+
+  const sourceWords = getSmartSplitSourceWords(captions);
 
   if (!sourceWords.length) return captions.map((caption) => ({ ...caption, words: caption.words.map((word) => ({ ...word })) }));
 
