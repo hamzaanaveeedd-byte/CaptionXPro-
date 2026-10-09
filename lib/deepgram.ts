@@ -1,6 +1,35 @@
-import type { DeepgramResponse } from "@/types/editor";
+import type { DeepgramResponse, TranscriptionLanguage } from "@/types/editor";
 
-export type TranscriptionLanguage = "auto" | "en" | "ur" | "ar" | "multi";
+export const TRANSCRIPTION_LANGUAGES: Array<{ value: TranscriptionLanguage; label: string }> = [
+  { value: "auto", label: "Auto detect" },
+  { value: "en", label: "English" },
+  { value: "ur", label: "Urdu" },
+  { value: "roman-ur", label: "Roman Urdu" },
+  { value: "hi", label: "Hindi" },
+  { value: "hinglish", label: "Hinglish" },
+  { value: "de", label: "German" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "it", label: "Italian" },
+  { value: "pt", label: "Portuguese" },
+  { value: "nl", label: "Dutch" },
+  { value: "ru", label: "Russian" },
+  { value: "ar", label: "Arabic" },
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "zh", label: "Chinese (Mandarin)" },
+  { value: "tr", label: "Turkish" },
+  { value: "id", label: "Indonesian" },
+  { value: "bn", label: "Bengali" },
+  { value: "pa", label: "Punjabi" },
+  { value: "vi", label: "Vietnamese" },
+];
+
+export function deepgramLanguageFor(value: TranscriptionLanguage) {
+  if (value === "roman-ur") return "ur";
+  if (value === "hinglish") return "multi";
+  return value;
+}
 
 export async function transcribeWithDeepgram(
   file: File,
@@ -20,8 +49,12 @@ export async function transcribeWithDeepgram(
     punctuate: "true",
     utterances: "true",
   });
-  if (language === "auto") params.set("detect_language", "true");
-  else params.set("language", language);
+
+  if (language === "auto") {
+    params.set("detect_language", "true");
+  } else {
+    params.set("language", deepgramLanguageFor(language));
+  }
 
   onStage?.(file.type.startsWith("video/") ? "Reading speech from video…" : "Analyzing audio…");
   const response = await fetch(`https://api.deepgram.com/v1/listen?${params.toString()}`, {

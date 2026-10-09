@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Caption, CaptionStyle, CanvasSettings, MediaInfo, ProjectSnapshot } from "@/types/editor";
+import type { Caption, CaptionStyle, CanvasSettings, MediaInfo, ProjectSnapshot, TranscriptionLanguage } from "@/types/editor";
 import { normalizeCaptions, splitCaption } from "@/lib/captions";
 import { clamp } from "@/lib/time";
 
@@ -10,7 +10,8 @@ type HistoryEntry = Caption[];
 
 type EditorState = {
   title: string;
-  language: "auto" | "en" | "ur" | "ar" | "multi";
+  language: TranscriptionLanguage;
+  detectedLanguage: string | null;
   media: MediaInfo | null;
   captions: Caption[];
   style: CaptionStyle;
@@ -24,6 +25,7 @@ type EditorState = {
   future: HistoryEntry[];
   setTitle: (value: string) => void;
   setLanguage: (value: EditorState["language"]) => void;
+  setDetectedLanguage: (value: string | null) => void;
   setMedia: (value: MediaInfo | null) => void;
   replaceCaptions: (value: Caption[]) => void;
   updateCaptionText: (id: string, text: string) => void;
@@ -95,6 +97,7 @@ export const useEditorStore = create<EditorState>()(
     (set, get) => ({
       title: "CaptionX Pro Project",
       language: "auto",
+      detectedLanguage: null,
       media: null,
       captions: [],
       style: defaultStyle,
@@ -109,7 +112,8 @@ export const useEditorStore = create<EditorState>()(
 
       setTitle: (title) => set({ title }),
       setLanguage: (language) => set({ language }),
-      setMedia: (media) => set({ media, currentTime: 0, activeCaptionId: null }),
+      setDetectedLanguage: (detectedLanguage) => set({ detectedLanguage }),
+      setMedia: (media) => set({ media, currentTime: 0, activeCaptionId: null, detectedLanguage: null }),
       replaceCaptions: (captions) =>
         set((state) => ({
           ...mutateWithHistory(state, () => captions),
@@ -283,6 +287,7 @@ export const useEditorStore = create<EditorState>()(
         set({
           title: "CaptionX Pro Project",
           media: null,
+          detectedLanguage: null,
           captions: [],
           style: defaultStyle,
           canvas: defaultCanvas,
@@ -304,16 +309,22 @@ export const useEditorStore = create<EditorState>()(
         versions: state.versions,
         zoom: state.zoom,
       }),
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as Partial<EditorState>),
-        media: null,
-        currentTime: 0,
-        activeCaptionId: null,
-        selectedCaptionId: null,
-        past: [],
-        future: [],
-      }),
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<Omit<EditorState, "language">> & { language?: string };
+        const migratedLanguage = saved.language === "multi" ? "hinglish" : saved.language;
+        return {
+          ...current,
+          ...saved,
+          language: (migratedLanguage ?? current.language) as TranscriptionLanguage,
+          media: null,
+          detectedLanguage: null,
+          currentTime: 0,
+          activeCaptionId: null,
+          selectedCaptionId: null,
+          past: [],
+          future: [],
+        };
+      },
     },
   ),
 );

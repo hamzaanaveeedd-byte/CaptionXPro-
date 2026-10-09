@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { CaptionXProLogo } from "@/components/captionxpro-logo";
 import { exportSrt, exportVtt, parseSubtitleFile } from "@/lib/captions";
+import { TRANSCRIPTION_LANGUAGES } from "@/lib/deepgram";
 import { downloadText } from "@/lib/download";
 import { useEditorStore } from "@/store/editor-store";
 
@@ -53,7 +54,7 @@ export function EditorToolbar({ onRender }: { onRender: () => Promise<void> }) {
       <span className="toolbar-divider" />
       <input className="project-title-input" value={title} onChange={(event) => setTitle(event.target.value)} aria-label="Project name" />
     </div>
-    <div className="toolbar-middle"><span>Saved locally</span><select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}><option value="auto">Auto detect</option><option value="en">English</option><option value="ur">Urdu</option><option value="ar">Arabic</option><option value="multi">Multilingual</option></select></div>
+    <div className="toolbar-middle"><span>Saved locally</span><select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}>{TRANSCRIPTION_LANGUAGES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
     <div className="toolbar-right">
       <button className="top-ghost" onClick={() => void shareProject()}>Share</button>
       <button className="top-ghost" onClick={() => subtitleInput.current?.click()}>Import</button>

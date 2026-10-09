@@ -1,3 +1,27 @@
+export type TranscriptionLanguage =
+  | "auto"
+  | "en"
+  | "ur"
+  | "roman-ur"
+  | "hi"
+  | "hinglish"
+  | "de"
+  | "es"
+  | "fr"
+  | "it"
+  | "pt"
+  | "nl"
+  | "ru"
+  | "ar"
+  | "ja"
+  | "ko"
+  | "zh"
+  | "tr"
+  | "id"
+  | "bn"
+  | "pa"
+  | "vi";
+
 export type WordToken = {
   id: string;
   text: string;
@@ -79,6 +103,7 @@ export type DeepgramResponse = {
   metadata?: { duration?: number };
   results?: {
     channels?: Array<{
+      detected_language?: string;
       alternatives?: Array<{
         transcript?: string;
         words?: DeepgramWord[];

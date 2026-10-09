@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import { parseSubtitleFile, deepgramWordsToTokens, segmentWords } from "@/lib/captions";
-import { transcribeWithDeepgram } from "@/lib/deepgram";
+import { transcribeWithDeepgram, deepgramLanguageFor } from "@/lib/deepgram";
+import { romanizeUrduTokens } from "@/lib/roman-urdu";
 import { useEditorStore } from "@/store/editor-store";
 import type { MediaInfo } from "@/types/editor";
 
@@ -15,6 +16,7 @@ export function SubtitleWorkspace({ onMediaReady }: { onMediaReady: (file: File,
   const language = useEditorStore((state) => state.language);
   const setMedia = useEditorStore((state) => state.setMedia);
   const setTitle = useEditorStore((state) => state.setTitle);
+  const setDetectedLanguage = useEditorStore((state) => state.setDetectedLanguage);
   const replaceCaptions = useEditorStore((state) => state.replaceCaptions);
   const createCaptionAt = useEditorStore((state) => state.createCaptionAt);
   const [busy, setBusy] = useState(false);
@@ -56,8 +58,11 @@ export function SubtitleWorkspace({ onMediaReady }: { onMediaReady: (file: File,
 
       setStage("Transcribing with Deepgram…");
       const response = await transcribeWithDeepgram(file, language, setStage);
+      const detected = response.results?.channels?.[0]?.detected_language ?? (language === "auto" ? null : deepgramLanguageFor(language));
+      setDetectedLanguage(detected);
       setStage("Creating time-synced captions…");
-      const words = deepgramWordsToTokens(response);
+      const rawWords = deepgramWordsToTokens(response);
+      const words = language === "roman-ur" ? romanizeUrduTokens(rawWords) : rawWords;
       if (!words.length) throw new Error("Deepgram returned no timed words. Check that the media contains clear speech.");
       const captions = segmentWords(words);
       if (!captions.length) throw new Error("Speech was found, but captions could not be created.");
