@@ -221,7 +221,7 @@ export const useEditorStore = create<EditorState>()(
         const sourceWords = getSmartSplitSourceWords(state.captions);
         if (sourceWords.length < 2) throw new Error("At least two transcript words are required for AI Smart Split.");
 
-        const response = await fetch("/api/gemini/smart-split", {
+        const response = await fetch("/api/groq/smart-split", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -253,7 +253,7 @@ export const useEditorStore = create<EditorState>()(
           activeCaptionId: null,
         }));
 
-        return { count: semanticCaptions.length, model: payload.model || "Gemini" };
+        return { count: semanticCaptions.length, model: payload.model || "Groq" };
       },
       mergeWithNext: (id) =>
         set((state) =>

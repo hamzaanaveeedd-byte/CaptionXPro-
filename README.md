@@ -20,11 +20,21 @@ The main website does not depend on a PNG logo, so there is no logo filename/imp
 
 ## Required Vercel variables
 - `DEEPGRAM_API_KEY` — transcription and dubbing
-- `GEMINI_API_KEY` — Semantic AI Smart Split
+- `GROQ_API_KEY` — Semantic AI Smart Split
 
-Add both variables in Vercel Project Settings > Environment Variables for Production and Preview.
+Optional:
+- `GROQ_MODEL` — defaults to `openai/gpt-oss-20b`
+
+Add the required variables in Vercel Project Settings > Environment Variables for Production and Preview, then redeploy.
 
 ## Caption splitting
 The captions panel includes both **Manual Split** (cursor + Enter or Split button) and **AI Smart Split**.
 
-AI Smart Split now uses Gemini server-side to read and understand the **entire current transcript first**, then returns semantic caption boundaries only. CaptionX Pro maps those boundaries back onto the original timed words, so Gemini never rewrites the transcript and Deepgram/manual word timings remain the timing source. Profiles remain Short (2–3), Balanced (2–5), and Readable (3–5). The operation is undoable through editor history.
+AI Smart Split now uses **Groq server-side** to read and understand the **entire current transcript first**, then returns semantic caption boundaries only. CaptionX Pro maps those boundaries back onto the original timed words, so Groq never rewrites the transcript and Deepgram/manual word timings remain the timing source.
+
+Profiles remain:
+- Short — 2–3 words
+- Balanced — 2–5 words
+- Readable — 3–5 words
+
+The operation remains undoable through editor history.
